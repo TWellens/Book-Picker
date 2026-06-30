@@ -4,7 +4,21 @@ import { useBookPool } from './hooks/useBookPool';
 import './App.css';
 
 function App() {
-  const { books, loading, setBooks, resetBooks, importFromText } = useBookPool();
+  const { books, loading, configError, setBooks, resetBooks, importFromText } = useBookPool();
+
+  if (configError) {
+    return (
+      <div className="app">
+        <main className="app-container">
+          <div className="config-error">
+            <h2>⚠ Konfigurationsfehler</h2>
+            <p>Die Supabase-Umgebungsvariablen fehlen.</p>
+            <p>Bitte <code>VITE_SUPABASE_URL</code> und <code>VITE_SUPABASE_ANON_KEY</code> in den Vercel-Einstellungen setzen und neu deployen.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app">

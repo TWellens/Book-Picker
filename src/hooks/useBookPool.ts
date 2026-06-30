@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, supabaseConfigured } from '../lib/supabaseClient';
 import { Book } from '../types/book';
 import { defaultBooks } from '../data/defaultBooks';
 
 export const useBookPool = () => {
   const [books, setLocalBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  const [configError] = useState(!supabaseConfigured);
 
   const fetchBooks = useCallback(async () => {
+    if (!supabase) { setLoading(false); return; }
     const { data, error } = await supabase
       .from('books')
       .select('id, title, author')
@@ -19,9 +21,10 @@ export const useBookPool = () => {
   }, []);
 
   useEffect(() => {
+    if (!supabaseConfigured) { setLoading(false); return; }
     fetchBooks();
 
-    const channel = supabase
+    const channel = supabase!
       .channel('books-realtime')
       .on(
         'postgres_changes',
@@ -30,10 +33,11 @@ export const useBookPool = () => {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => { supabase!.removeChannel(channel); };
   }, [fetchBooks]);
 
   const setBooks = useCallback(async (newBooks: Book[]) => {
+    if (!supabase) return;
     setLocalBooks(newBooks);
     await supabase.from('books').delete().not('id', 'is', null);
     if (newBooks.length > 0) {
@@ -46,6 +50,7 @@ export const useBookPool = () => {
   }, []);
 
   const resetBooks = useCallback(async () => {
+    if (!supabase) return;
     setLocalBooks(defaultBooks);
     await supabase.from('books').delete().not('id', 'is', null);
     const { data } = await supabase
@@ -74,6 +79,7 @@ export const useBookPool = () => {
   return {
     books,
     loading,
+    configError,
     setBooks,
     resetBooks,
     importFromText,

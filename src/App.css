@@ -328,6 +328,26 @@ body {
   color: var(--dark-red);
 }
 
+/* ── Config Error ────────────────────────── */
+.config-error {
+  background: #fff0f0;
+  border: 2px solid var(--accent-red);
+  border-radius: 8px;
+  padding: var(--sp-lg);
+  text-align: center;
+  color: var(--dark-red);
+}
+
+.config-error h2 { margin-bottom: var(--sp-sm); }
+.config-error p  { margin-bottom: var(--sp-sm); font-size: 0.95rem; }
+.config-error code {
+  background: rgba(155,17,30,0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
 /* ── Loading State ───────────────────────── */
 .loading-state {
   text-align: center;
