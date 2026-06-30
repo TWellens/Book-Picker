@@ -26,7 +26,7 @@ export const BookPoolEditor: React.FC<BookPoolEditorProps> = ({
 
   const handleSaveImported = () => {
     if (importedBooks.length > 0) {
-      onSave(importedBooks);
+      onSave([...books, ...importedBooks]);
       setImportText('');
       setImportedBooks([]);
     }
