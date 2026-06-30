@@ -4,34 +4,28 @@ import { useState, useEffect } from 'react';
 const coverCache = new Map<string, string | null>();
 
 async function fetchCover(title: string, author: string): Promise<string | null> {
-  // Try progressively looser queries until we get a thumbnail
-  const queries = [
-    `intitle:${title} inauthor:${author}`,
-    `${title} ${author}`,
-    title,
-  ];
+  // Open Library – free, no API key, no quota limits
+  // Try title+author first, then title only as fallback
+  const queries = [`${title} ${author}`, title];
 
   for (const q of queries) {
     const url =
-      `https://www.googleapis.com/books/v1/volumes` +
-      `?q=${encodeURIComponent(q)}&maxResults=1&printType=books`;
+      `https://openlibrary.org/search.json` +
+      `?q=${encodeURIComponent(q)}&limit=1&fields=cover_i`;
 
     try {
       const res = await fetch(url);
       if (!res.ok) continue;
 
       const data = await res.json();
-      const thumb: string | undefined =
-        data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
+      const coverId: number | undefined = data?.docs?.[0]?.cover_i;
 
-      if (thumb) {
-        return thumb
-          .replace('http://', 'https://')  // always HTTPS
-          .replace('&edge=curl', '')        // remove curl effect
-          .replace('zoom=1', 'zoom=2');     // higher resolution
+      if (coverId) {
+        // -M = medium (180px wide), -L = large
+        return `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`;
       }
     } catch (e) {
-      console.warn(`[BookCover] fetch error for "${q}":`, e);
+      console.warn(`[BookCover] Error fetching cover for "${q}":`, e);
     }
   }
 
