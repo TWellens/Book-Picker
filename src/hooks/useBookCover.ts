@@ -4,24 +4,38 @@ import { useState, useEffect } from 'react';
 const coverCache = new Map<string, string | null>();
 
 async function fetchCover(title: string, author: string): Promise<string | null> {
-  const query = encodeURIComponent(`intitle:${title} inauthor:${author}`);
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1&fields=items(volumeInfo/imageLinks)`;
+  // Try progressively looser queries until we get a thumbnail
+  const queries = [
+    `intitle:${title} inauthor:${author}`,
+    `${title} ${author}`,
+    title,
+  ];
 
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
-    const thumb: string | undefined = data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
-    if (!thumb) return null;
+  for (const q of queries) {
+    const url =
+      `https://www.googleapis.com/books/v1/volumes` +
+      `?q=${encodeURIComponent(q)}&maxResults=1&printType=books`;
 
-    return thumb
-      .replace('http://', 'https://')   // always HTTPS
-      .replace('&edge=curl', '')         // remove curl effect
-      .replace('zoom=1', 'zoom=2');      // higher resolution
-  } catch {
-    console.warn(`[BookCover] Could not fetch cover for "${title}" by "${author}"`);
-    return null;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      const thumb: string | undefined =
+        data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
+
+      if (thumb) {
+        return thumb
+          .replace('http://', 'https://')  // always HTTPS
+          .replace('&edge=curl', '')        // remove curl effect
+          .replace('zoom=1', 'zoom=2');     // higher resolution
+      }
+    } catch (e) {
+      console.warn(`[BookCover] fetch error for "${q}":`, e);
+    }
   }
+
+  return null;
 }
 
 export function useBookCover(title: string, author: string) {
