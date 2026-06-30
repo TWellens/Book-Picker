@@ -14,7 +14,7 @@ export const BookPoolEditor: React.FC<BookPoolEditorProps> = ({
   onReset,
   onImport,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const [importText, setImportText] = useState('');
   const [importedBooks, setImportedBooks] = useState<Book[]>([]);
 
