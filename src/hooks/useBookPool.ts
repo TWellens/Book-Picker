@@ -1,38 +1,58 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabaseClient';
 import { Book } from '../types/book';
 import { defaultBooks } from '../data/defaultBooks';
 
-const STORAGE_KEY = 'cosy-crime-books';
-
 export const useBookPool = () => {
-  const [books, setBooks] = useState<Book[]>([]);
+  const [books, setLocalBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load books from localStorage or use defaults
-  useEffect(() => {
-    const savedBooks = localStorage.getItem(STORAGE_KEY);
-    if (savedBooks) {
-      try {
-        const parsed = JSON.parse(savedBooks) as Book[];
-        // Validate that it's an array of books
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setBooks(parsed);
-          return;
-        }
-      } catch {
-        // If parsing fails, use defaults
-      }
+  const fetchBooks = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('books')
+      .select('id, title, author')
+      .order('created_at', { ascending: true });
+    if (!error && data) {
+      setLocalBooks(data as Book[]);
     }
-    setBooks(defaultBooks);
+    setLoading(false);
   }, []);
 
-  const saveBooks = useCallback((newBooks: Book[]) => {
-    setBooks(newBooks);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newBooks));
+  useEffect(() => {
+    fetchBooks();
+
+    const channel = supabase
+      .channel('books-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'books' },
+        () => { fetchBooks(); }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchBooks]);
+
+  const setBooks = useCallback(async (newBooks: Book[]) => {
+    setLocalBooks(newBooks);
+    await supabase.from('books').delete().not('id', 'is', null);
+    if (newBooks.length > 0) {
+      const { data } = await supabase
+        .from('books')
+        .insert(newBooks.map(b => ({ title: b.title, author: b.author })))
+        .select('id, title, author');
+      if (data) setLocalBooks(data as Book[]);
+    }
   }, []);
 
-  const resetBooks = useCallback(() => {
-    setBooks(defaultBooks);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultBooks));
+  const resetBooks = useCallback(async () => {
+    setLocalBooks(defaultBooks);
+    await supabase.from('books').delete().not('id', 'is', null);
+    const { data } = await supabase
+      .from('books')
+      .insert(defaultBooks.map(b => ({ title: b.title, author: b.author })))
+      .select('id, title, author');
+    if (data) setLocalBooks(data as Book[]);
   }, []);
 
   const importFromText = useCallback((text: string): Book[] => {
@@ -41,21 +61,20 @@ export const useBookPool = () => {
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    const importedBooks: Book[] = lines.map((line, index) => {
+    return lines.map((line, index) => {
       const [title, author] = line.split(';').map((part) => part.trim());
       return {
-        id: `imported-${Date.now()}-${index}`,
+        id: `preview-${Date.now()}-${index}`,
         title: title || 'Unbekanntes Buch',
         author: author || 'Unbekannt',
       };
     });
-
-    return importedBooks;
   }, []);
 
   return {
     books,
-    setBooks: saveBooks,
+    loading,
+    setBooks,
     resetBooks,
     importFromText,
   };

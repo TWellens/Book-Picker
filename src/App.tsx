@@ -4,7 +4,7 @@ import { useBookPool } from './hooks/useBookPool';
 import './App.css';
 
 function App() {
-  const { books, setBooks, resetBooks, importFromText } = useBookPool();
+  const { books, loading, setBooks, resetBooks, importFromText } = useBookPool();
 
   return (
     <div className="app">
@@ -14,7 +14,11 @@ function App() {
           <p className="subtitle">Ziehe das nächste Buch für euren Buchclub.</p>
         </header>
 
-        {books.length > 0 ? (
+        {loading ? (
+          <div className="loading-state">
+            <p>Buchpool wird geladen…</p>
+          </div>
+        ) : books.length > 0 ? (
           <>
             <BookPicker books={books} />
             <BookPoolEditor

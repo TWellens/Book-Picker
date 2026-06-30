@@ -328,6 +328,21 @@ body {
   color: var(--dark-red);
 }
 
+/* ── Loading State ───────────────────────── */
+.loading-state {
+  text-align: center;
+  padding: var(--sp-lg);
+  color: var(--text-secondary);
+  font-family: var(--font-pixel);
+  font-size: 1.1rem;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
 /* ── Empty State ─────────────────────────── */
 .empty-state {
   text-align: center;
